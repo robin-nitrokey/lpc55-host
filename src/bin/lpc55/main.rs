@@ -54,7 +54,9 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
 
     let uuid = args.value_of("UUID").map(Uuid::parse_str).transpose()?;
 
-    let bootloader = || Bootloader::try_find(vid, pid, uuid).context("Could not attach to a bootloader");
+    let device_path = args.value_of("device-path").map(std::ffi::CString::new).transpose()?;
+
+    let bootloader = || Bootloader::try_find(vid, pid, uuid, device_path.as_deref()).context("Could not attach to a bootloader");
 
     if let Some(command) = args.subcommand_matches("http") {
         let bootloader = bootloader()?;
@@ -67,7 +69,7 @@ fn try_main(args: clap::ArgMatches<'_>) -> anyhow::Result<()> {
     }
 
     if args.subcommand_matches("ls").is_some() {
-        let bootloaders = Bootloader::list();
+        let bootloaders = Bootloader::list(None);
         println!("bootloaders:");
         for bootloader in bootloaders {
             println!("{:?}", &bootloader);

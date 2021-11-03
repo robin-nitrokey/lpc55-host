@@ -62,6 +62,13 @@ pub fn app() -> clap::App<'static, 'static> {
              .global(true)
         )
 
+        .arg(Arg::with_name("device-path")
+             .long("device-path")
+             .help("HID device path of the bootloader, e. g. /dev/hidraw0")
+             .takes_value(true)
+             .global(true)
+        )
+
         .arg(Arg::with_name("v")
               .short("v")
               .long("verbose")

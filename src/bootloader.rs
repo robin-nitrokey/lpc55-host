@@ -3,6 +3,7 @@
 //! Construct a `Bootloader` from a VID/PID pair (optionally a UUID to disambiguate),
 //! then call its methods.
 
+use std::ffi::CStr;
 use anyhow::anyhow;
 use enum_iterator::IntoEnumIterator;
 use hidapi::HidApi;
@@ -61,12 +62,12 @@ pub type Result<T> = std::result::Result<T, Error>;
 impl Bootloader {
     /// Select a unique ROM bootloader with the given VID and PID.
     pub fn try_new(vid: Option<u16>, pid: Option<u16>) -> anyhow::Result<Self> {
-        Self::try_find(vid, pid, None)
+        Self::try_find(vid, pid, None, None)
     }
 
-    /// Attempt to find a unique ROM bootloader with the given VID, PID and UUID.
-    pub fn try_find(vid: Option<u16>, pid: Option<u16>, uuid: Option<Uuid>) -> anyhow::Result<Self> {
-        let mut bootloaders = Self::find(vid, pid, uuid);
+    /// Attempt to find a unique ROM bootloader with the given VID, PID, UUID and device path.
+    pub fn try_find(vid: Option<u16>, pid: Option<u16>, uuid: Option<Uuid>, device_path: Option<&CStr>) -> anyhow::Result<Self> {
+        let mut bootloaders = Self::find(vid, pid, uuid, device_path);
         if bootloaders.len() > 1 {
             Err(anyhow!("Muliple matching bootloaders found"))
         } else {
@@ -74,9 +75,9 @@ impl Bootloader {
         }
     }
 
-    /// Finds all ROM bootloader with the given VID, PID and UUID.
-    pub fn find(vid: Option<u16>, pid: Option<u16>, uuid: Option<Uuid>) -> Vec<Self> {
-        Self::list()
+    /// Finds all ROM bootloader with the given VID, PID, UUID and device path.
+    pub fn find(vid: Option<u16>, pid: Option<u16>, uuid: Option<Uuid>, device_path: Option<&CStr>) -> Vec<Self> {
+        Self::list(device_path)
             .into_iter()
             .filter(|bootloader| vid.map_or(true, |vid| vid == bootloader.vid))
             .filter(|bootloader| pid.map_or(true, |pid| pid == bootloader.pid))
@@ -85,9 +86,12 @@ impl Bootloader {
     }
 
     /// Returns a vector of all HID devices that appear to be ROM bootloaders
-    pub fn list() -> Vec<Self> {
+    pub fn list(device_path: Option<&CStr>) -> Vec<Self> {
         let api = HidApi::new().unwrap();
         api.device_list()
+            .filter(|device_info| {
+                device_path.map(|path| device_info.path() == path).unwrap_or(true)
+            })
             .filter_map(|device_info| {
                 let vid = device_info.vendor_id();
                 let pid = device_info.product_id();
