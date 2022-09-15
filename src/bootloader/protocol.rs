@@ -102,7 +102,7 @@ impl TryFrom<ReceivedPacket> for Vec<u8> {
     }
 }
 
-pub const READ_TIMEOUT: i32 = 2000;
+pub const READ_TIMEOUT: i32 = -1;
 
 impl Protocol {
 
